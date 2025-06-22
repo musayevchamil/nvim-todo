@@ -6,10 +6,74 @@ function M.add()
 	vim.ui.input({ prompt = "New TODO: " }, function(input)
 		if input and #input > 0 then
 			local f = io.open(todo_file, "a")
-			f:write("[ ] " .. input .. "\\n")
+			f:write("[ ] " .. input .. "\n")
 			f:close()
 			print("✅ TODO added!")
 		end
+		M.show()
+	end)
+end
+
+function M.delete()
+	local todos = {}
+	local f = io.open(todo_file, "r")
+	if f then
+		for line in f:lines() do
+			table.insert(todos, line)
+		end
+		f:close()
+	end
+
+	vim.ui.input({ prompt = "Delete which TODO (number)?" }, function(input)
+		local index = tonumber(input)
+		if index and todos[index] then
+			table.remove(todos, index)
+			local fw = io.open(todo_file, "w")
+			for _, line in ipairs(todos) do
+				fw:write(line .. "\n")
+			end
+			fw:close()
+			print("🗑️ TODO deleted!")
+		else
+			print("❌ Invalid number")
+		end
+		M.show()
+	end)
+end
+
+function M.toggle()
+	local todos = {}
+	local f = io.open(todo_file, "r")
+	if f then
+		for line in f:lines() do
+			table.insert(todos, line)
+		end
+		f:close()
+	end
+
+	vim.ui.input({ prompt = "Toggle which TODO (number)?" }, function(input)
+		local index = tonumber(input)
+		if index and todos[index] then
+			local line = todos[index]
+			if line:match("^%[ %]") then
+				todos[index] = line:gsub("^%[ %]", "[x]")
+			elseif line:match("^%[x%]") then
+				todos[index] = line:gsub("^%[x%]", "[ ]")
+			else
+				print("❌ Not a valid TODO format.")
+				return
+			end
+
+			local fw = io.open(todo_file, "w")
+			for _, l in ipairs(todos) do
+				fw:write(l .. "\n")
+			end
+			fw:close()
+			print("✅ TODO toggled!")
+		else
+			print("❌ Invalid number")
+		end
+		M.show()
 	end)
 end
 
@@ -17,7 +81,7 @@ function M.show()
 	local lines = {}
 	local f = io.open(todo_file, "r")
 	if f then
-		for line in f:lines() do 
+		for line in f:lines() do
 			table.insert(lines, line)
 		end
 		f:close()
@@ -25,15 +89,24 @@ function M.show()
 		table.insert(lines, "No TODOs yet!")
 	end
 
-	local buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+	for i, line in ipairs(lines) do
+		lines[i] = string.format("%d. %s", i, line)
+	end
+
+	if todo_buf and vim.api.nvim_buf_is_valid(todo_buf) and vim.api.nvim_win_is_valid(todo_win) then
+		vim.api.nvim_buf_set_lines(todo_buf, 0, -1, false, lines)
+		return
+	end
+
+	todo_buf = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_lines(todo_buf, 0, -1, false, lines)
 
 	local width = math.floor(vim.o.columns * 0.5)
 	local height = math.floor(vim.o.lines * 0.5)
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
 
-	vim.api.nvim_open_win(buf, true, {
+	todo_win = vim.api.nvim_open_win(todo_buf, true, {
 		relative = "editor",
 		row = row,
 		col = col,
@@ -43,6 +116,40 @@ function M.show()
 		border = "rounded",
 	})
 end
+
+function M.telescope()
+	local todos = {}
+	local f = io.open(todo_file, "r")
+	if f then
+		for line in f:lines() do
+			table.insert(todos, line)
+		end
+		f:close()
+	end
+
+	local pickers = require("telescope.pickers")
+	local finders = require("telescope.finders")
+	local conf = require("telescope.config").values
+	local actions = require("telescope.actions")
+	local action_state = require("telescope.actions.state")
+
+	pickers.new({}, {
+		prompt_title = "TODOs",
+		finder = finders.new_table {
+			results = todos,
+		},
+		sorter = conf.generic_sorter({}),
+		attach_mappings = function(_, map)
+			map("i", "<CR>", function()
+				local selection = action_state.get_selected_entry()
+				print("Selected TODO: " .. selection[1])
+				actions.close()
+			end)
+			return true
+		end,
+	}):find()
+end
+
 
 return M
 
