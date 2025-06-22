@@ -1,6 +1,15 @@
 local M = {}
 
-local todo_file = vim.fn.stdpath("data") .. "/todos.txt"
+local function get_todo_file()
+	local git_root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+	if git_root and git_root ~= "" and vim.fn.isdirectory(git_root) == 1 then
+		return git_root .. "/.nvim_todo"
+	else
+		return vim.fn.stdpath("data") .. "/todos.txt"
+	end
+end
+
+local todo_file = get_todo_file()
 
 function M.add()
 	vim.ui.input({ prompt = "New TODO: " }, function(input)
