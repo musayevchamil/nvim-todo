@@ -17,6 +17,7 @@ vim.api.nvim_create_user_command("TodoToggle", function()
 end, {})
 
 vim.api.nvim_create_user_command("TodoTelescope", function()
-  require("nvim-todo.todo").telescope()
+  todo.telescope()
 end, {})
 
+return todo

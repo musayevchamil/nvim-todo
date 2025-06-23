@@ -127,6 +127,7 @@ function M.show()
 end
 
 function M.telescope()
+	local todo_file = get_todo_file()
 	local todos = {}
 	local f = io.open(todo_file, "r")
 	if f then
@@ -142,20 +143,65 @@ function M.telescope()
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
 
+	local function toggle_todo(selected)
+		local index = nil
+		for i, v in ipairs(todos) do
+			if v == selected then
+				index = i
+				break
+			end
+		end
+
+		if index then
+			if todos[index]:match("^%[ %]") then
+				todos[index] = todos[index]:gsub("^%[ %]", "[x]")
+			elseif todos[index]:match("^%[x%]") then
+				todos[index] = todos[index]:gsub("^%[x%]", "[ ]")
+			end
+
+			local fw = io.open(todo_file, "w")
+			for _, l in ipairs(todos) do
+				fw:write(l .. "\n")
+			end
+			fw:close()
+			print("🔁 Toggled: " .. todos[index])
+		end
+	end
+
 	pickers.new({}, {
 		prompt_title = "TODOs",
 		finder = finders.new_table {
 			results = todos,
+			entry_maker = function(item)
+				return {
+					value   = item,   -- the raw string
+					display = item,   -- what you see
+					ordinal = item,   -- for sorting
+				}
+			end,
 		},
 		sorter = conf.generic_sorter({}),
-		attach_mappings = function(_, map)
-			map("i", "<CR>", function()
-				local selection = action_state.get_selected_entry()
-				print("Selected TODO: " .. selection[1])
-				actions.close()
-			end)
+		attach_mappings = function(prompt_bufnr, map)
+			local function do_toggle()
+				local sel = action_state.get_selected_entry()
+				if not sel or type(sel.value) ~= "string" then
+					print("❌ No valid TODO selected")
+					return
+				end
+
+				toggle_todo(sel.value)
+				actions.close(prompt_bufnr)
+				-- reopen for fresh list
+				vim.defer_fn(function()
+					M.telescope()
+				end, 100)
+			end
+
+			map("i", "<C-t>", do_toggle)
+			map("n", "<C-t>", do_toggle)
 			return true
 		end,
+
 	}):find()
 end
 
