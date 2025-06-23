@@ -143,6 +143,27 @@ function M.telescope()
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
 
+	local function delete_todo(selected)
+		-- find index
+		local idx
+		for i, line in ipairs(todos) do
+			if line == selected then
+				idx = i
+				break
+			end
+		end
+		if not idx then return end
+
+		-- remove from table
+		table.remove(todos, idx)
+		-- rewrite file
+		local fw = io.open(get_todo_file(), "w")
+		for _, l in ipairs(todos) do fw:write(l .. "\n") end
+		fw:close()
+		print("🗑️ Deleted: " .. selected)
+	end
+
+
 	local function toggle_todo(selected)
 		local index = nil
 		for i, v in ipairs(todos) do
@@ -197,8 +218,20 @@ function M.telescope()
 				end, 100)
 			end
 
+			local function do_delete()
+				local sel = require("telescope.actions.state").get_selected_entry()
+				if sel and type(sel.value)=="string" then
+					delete_todo(sel.value)
+				end
+				require("telescope.actions").close(prompt_bufnr)
+				vim.defer_fn(function() require("nvim-todo").telescope() end, 100)
+			end
+
 			map("i", "<C-t>", do_toggle)
 			map("n", "<C-t>", do_toggle)
+			map("i", "<C-d>", do_delete)
+			map("n", "<C-d>", do_delete)
+
 			return true
 		end,
 
