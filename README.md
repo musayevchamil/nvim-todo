@@ -36,11 +36,16 @@ use {
 
 ## Usage
 
-* `:TodoAdd`            Prompt & add a new item
 * `:TodoList`           Show all TODOs in a floating window
-* `:TodoDelete`         Prompt for number & delete an item
-* `:TodoToggle`         Prompt for number & toggle done/undone
+![image](https://github.com/user-attachments/assets/65f270a2-e069-4562-aaaf-b633a4fbcac0)
+
+  * `:TodoAdd`            Prompt & add a new item
+  * `:TodoDelete`         Prompt for number & delete an item
+  * `:TodoToggle`         Prompt for number & toggle done/undone
+
+
 * `:TodoTelescope`      Open Telescope picker:
+![image](https://github.com/user-attachments/assets/dbd1ecb8-79c6-4451-9efc-a19fb1bb33f0)
 
   * `<CR>` to confirm/select (no-op)
   * `<C-t>` to toggle status
